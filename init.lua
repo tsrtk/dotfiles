@@ -9,6 +9,7 @@ vim.keymap.set('v', '<C-c>', 'y', { noremap = true })
 vim.keymap.set('n', '<C-v>', '"+p', { noremap = true })
 vim.keymap.set('v', '<C-v>', '"+p', { noremap = true })
 
+-- Package Manager
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
     vim.fn.system({
@@ -19,6 +20,7 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
+-- Install packages
 require("lazy").setup({
   -- Configuring LSP
   "neovim/nvim-lspconfig",
@@ -34,6 +36,11 @@ require("lazy").setup({
       "hrsh7th/cmp-vsnip", -- For `vsnip` users
       "hrsh7th/vim-vsnip"
     }
+  },
+
+  -- Termainal
+  {
+    'akinsho/toggleterm.nvim', version = "*", config = true
   }
 })
 
@@ -66,3 +73,6 @@ cmp.setup({
     { name = 'buffer' },
   })
 })
+
+-- toggleterm
+require("toggleterm").setup{}
