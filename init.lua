@@ -1,13 +1,23 @@
--- Basic
+-- Basic settings
 vim.opt.number = true
+vim.wo.wrap = false
+vim.cmd('colorscheme vim')
 
 -- Copy and Paste
-vim.opt.clipboard = "unnamedplus"
-
-vim.keymap.set('n', '<C-c>', 'y', { noremap = true })
-vim.keymap.set('v', '<C-c>', 'y', { noremap = true })
-vim.keymap.set('n', '<C-v>', '"+p', { noremap = true })
-vim.keymap.set('v', '<C-v>', '"+p', { noremap = true })
+vim.opt.clipboard = 'unnamedplus'
+vim.g.clipboard = {
+  name = 'OSC 52',
+  copy = {
+    ['+'] = require('vim.ui.clipboard.osc52').copy('+'),
+    ['*'] = require('vim.ui.clipboard.osc52').copy('*'),
+  },
+  paste = {
+    ['+'] = require('vim.ui.clipboard.osc52').paste('+'),
+    ['*'] = require('vim.ui.clipboard.osc52').paste('*'),
+  },
+}
+vim.api.nvim_set_keymap('n', '<C-c>', '"+y', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('v', '<C-c>', '"+y', { noremap = true, silent = true })
 
 -- Package Manager
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
@@ -22,8 +32,25 @@ vim.opt.rtp:prepend(lazypath)
 
 -- Install packages
 require("lazy").setup({
-  -- Configuring LSP
-  "neovim/nvim-lspconfig",
+  -- LSP
+  {
+    "neovim/nvim-lspconfig",
+    config = function()
+      local capabilities = require('cmp_nvim_lsp').default_capabilities()
+      local on_attach = function(client, bufnr)
+        local buf_map = function(mode, lhs, rhs)
+          vim.api.nvim_buf_set_keymap(bufnr, mode, lhs, rhs, { noremap=true, silent=true })
+        end
+        buf_map('n', 'gd', '<cmd>lua vim.lsp.buf.definition()<CR>')
+        buf_map('n', 'gr', '<cmd>lua vim.lsp.buf.references()<CR>')
+        buf_map('n', 'K', '<cmd>lua vim.lsp.buf.hover()<CR>')
+      end
+      require('lspconfig').pyright.setup({
+        capabilities = capabilities,
+        on_attach = on_attach,
+      })
+    end
+  },
 
   -- Auto-completion
   {
@@ -33,46 +60,48 @@ require("lazy").setup({
       "hrsh7th/cmp-buffer",
       "hrsh7th/cmp-path",
       "hrsh7th/cmp-cmdline",
-      "hrsh7th/cmp-vsnip", -- For `vsnip` users
+      "hrsh7th/cmp-vsnip",
       "hrsh7th/vim-vsnip"
-    }
+    },
+    config = function()
+      local cmp = require("cmp")
+      cmp.setup({
+        snippet = {
+          expand = function(args)
+            vim.fn"vsnip#anonymous"
+          end,
+        },
+        mapping = cmp.mapping.preset.insert({
+          ['<C-b>'] = cmp.mapping.scroll_docs(-4),
+          ['<C-f>'] = cmp.mapping.scroll_docs(4),
+          ['<C-Space>'] = cmp.mapping.complete(),
+          ['<C-e>'] = cmp.mapping.abort(),
+          ['<CR>'] = cmp.mapping.confirm({ select = true }),
+        }),
+        sources = cmp.config.sources({
+          { name = 'nvim_lsp' },
+          { name = 'vsnip' },
+        }, {
+          { name = 'buffer' },
+        })
+      })
+    end
   },
 
-  -- Termainal
+  -- Terminal
   {
-    'akinsho/toggleterm.nvim', version = "*", config = true
+    'akinsho/toggleterm.nvim',
+    version = "*",
+    config = function()
+      require("toggleterm").setup{}
+    end
   }
 })
 
--- Configuring LSP
-local lspconfig = require('lspconfig')
-lspconfig.pyright.setup{}
-vim.keymap.set('n', 'gd', '<cmd>lua vim.lsp.buf.definition()<CR>')
-vim.keymap.set('n', 'gr', '<cmd>lua vim.lsp.buf.references()<CR>')
-vim.keymap.set('n', 'K', '<cmd>lua vim.lsp.buf.hover()<CR>')
-
--- Auto-completion
-local cmp = require'cmp'
-cmp.setup({
-  snippet = {
-    expand = function(args)
-      vim.fn["vsnip#anonymous"](args.body) -- For `vsnip` users
-    end,
-  },
-  mapping = cmp.mapping.preset.insert({
-    ['<C-b>'] = cmp.mapping.scroll_docs(-4),
-    ['<C-f>'] = cmp.mapping.scroll_docs(4),
-    ['<C-Space>'] = cmp.mapping.complete(),
-    ['<C-e>'] = cmp.mapping.abort(),
-    ['<CR>'] = cmp.mapping.confirm({ select = true }),
-  }),
-  sources = cmp.config.sources({
-    { name = 'nvim_lsp' },
-    { name = 'vsnip' }, -- Snippet support
-  }, {
-    { name = 'buffer' },
-  })
+-- Diagnostic settings
+vim.diagnostic.config({
+  virtual_text = true,
+  signs = true,
+  underline = true,
+  update_in_insert = false,
 })
-
--- toggleterm
-require("toggleterm").setup{}
